@@ -82,9 +82,6 @@ public class KitchenSinkController : MonoBehaviour
             Debug.LogError("KitchenSinkController: Failed to set external command handler!");
         }
         
-        // Test dropdown immediately
-        TestDropdown();
-        
         // Initialize demo state
         InitializeDemoState();
         
@@ -219,8 +216,6 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void HideAllSections()
     {
-        Debug.Log("KitchenSinkController: Hiding all sections");
-        
         uguimlComponent.HideElement("leftColumn");
         uguimlComponent.HideElement("centerColumn");
         uguimlComponent.HideElement("rightColumn");
@@ -233,16 +228,14 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void ValidateInput(string inputValue)
     {
-        Debug.Log($"KitchenSinkController: Validating input: {inputValue}");
-        
         if (string.IsNullOrEmpty(inputValue))
         {
-            ShowToastMessage("⚠️ Input cannot be empty!");
+            ShowToastMessage("Input cannot be empty!");
             PlaySound(errorSound);
         }
         else
         {
-            ShowToastMessage($"✅ Valid input: {inputValue}");
+            ShowToastMessage($"Valid input: {inputValue}");
             PlaySound(successSound);
         }
     }
@@ -252,23 +245,21 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void ValidateAllInputs()
     {
-        Debug.Log("KitchenSinkController: Validating all inputs");
-        
         var usernameField = uguimlComponent.GetInputField("usernameField");
         var emailField = uguimlComponent.GetInputField("emailField");
         
         bool isValid = true;
-        string message = "✅ All inputs valid!";
+        string message = "All inputs valid!";
         
         if (usernameField != null && string.IsNullOrEmpty(usernameField.text))
         {
             isValid = false;
-            message = "⚠️ Username is required!";
+            message = "Username is required!";
         }
         else if (emailField != null && string.IsNullOrEmpty(emailField.text))
         {
             isValid = false;
-            message = "⚠️ Email is required!";
+            message = "Email is required!";
         }
         
         ShowToastMessage(message);
@@ -286,9 +277,8 @@ public class KitchenSinkController : MonoBehaviour
     public void ToggleSound(string isEnabled)
     {
         soundEnabled = bool.Parse(isEnabled);
-        Debug.Log($"KitchenSinkController: Sound {(soundEnabled ? "enabled" : "disabled")}");
         
-        ShowToastMessage(soundEnabled ? "🔊 Sound Enabled" : "🔇 Sound Disabled");
+        ShowToastMessage(soundEnabled ? "Sound Enabled" : "Sound Disabled");
     }
     
     /// <summary>
@@ -299,7 +289,6 @@ public class KitchenSinkController : MonoBehaviour
         currentTheme = int.Parse(themeIndex);
         string[] themes = { "Dark Theme", "Light Theme", "Colorful", "Rainbow" };
         
-        Debug.Log($"KitchenSinkController: Theme changed to {themes[currentTheme]}");
         ShowToastMessage($"Theme: {themes[currentTheme]}");
         
         // Animate theme change
@@ -319,17 +308,15 @@ public class KitchenSinkController : MonoBehaviour
             playerHealth = health;
             SetElementText("healthDisplay", $"{health:F0}%");
             
-            Debug.Log($"KitchenSinkController: Health updated to {health}%");
-            
             // Change color based on health
             if (health < 25f)
             {
-                ShowToastMessage("💀 Critical Health!");
+                ShowToastMessage("Critical Health!");
                 PlaySound(errorSound);
             }
             else if (health < 50f)
             {
-                ShowToastMessage("⚠️ Low Health");
+                ShowToastMessage("Low Health");
             }
         }
     }
@@ -339,8 +326,6 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void LevelUpPlayer()
     {
-        Debug.Log("KitchenSinkController: Player leveled up!");
-        
         // Increase stats
         playerExp = 0f;
         playerHealth = Mathf.Min(100f, playerHealth + 25f);
@@ -356,7 +341,7 @@ public class KitchenSinkController : MonoBehaviour
         // Celebration animation
         StartCoroutine(LevelUpCelebration());
         
-        ShowToastMessage("🎉 LEVEL UP! Stats increased!");
+        ShowToastMessage("LEVEL UP! Stats increased!");
         PlaySound(successSound);
     }
     
@@ -376,8 +361,6 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void UpdateGameStats()
     {
-        Debug.Log("KitchenSinkController: Updating game stats");
-        
         SetElementText("stat1Value", $"{playerGold:N0}");
         SetElementText("stat2Value", $"{playerScore:N0}");
         SetElementText("stat3Value", $"x{playerStreak}");
@@ -393,8 +376,6 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void AnimateStatCards()
     {
-        Debug.Log("KitchenSinkController: Animating stat cards");
-        
         StartCoroutine(AnimateStatCardsSequence());
     }
     
@@ -415,7 +396,6 @@ public class KitchenSinkController : MonoBehaviour
     public void SelectGridItem(string itemNumber)
     {
         selectedGridItem = int.Parse(itemNumber);
-        Debug.Log($"KitchenSinkController: Selected grid item {selectedGridItem}");
         
         SetElementText("gridSelection", $"Selected: {selectedGridItem}");
         uguimlComponent.BounceElement($"gridBtn{selectedGridItem}");
@@ -428,8 +408,7 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void OpenMenu(string menuName)
     {
-        Debug.Log($"KitchenSinkController: Opening {menuName} menu");
-        ShowToastMessage($"📂 Opened {menuName} Menu");
+        ShowToastMessage($" Opened {menuName} Menu");
         
         OnMenuOpened?.Invoke(menuName);
         PlaySound(buttonClickSound);
@@ -440,8 +419,7 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void NavigateToPage(string pageName)
     {
-        Debug.Log($"KitchenSinkController: Navigating to {pageName}");
-        ShowToastMessage($"🏃 Navigating to {pageName}");
+        ShowToastMessage($"Navigating to {pageName}");
         
         // Animate the navigation
         uguimlComponent.BounceElement("verticalDemo");
@@ -455,8 +433,6 @@ public class KitchenSinkController : MonoBehaviour
     public void ShowModalDialog()
     {
         if (isModalVisible) return;
-        
-        Debug.Log("KitchenSinkController: Showing modal dialog");
         
         isModalVisible = true;
         uguimlComponent.FadeInElement("modalDialog");
@@ -473,8 +449,6 @@ public class KitchenSinkController : MonoBehaviour
     {
         if (!isModalVisible) return;
         
-        Debug.Log("KitchenSinkController: Closing modal dialog");
-        
         isModalVisible = false;
         uguimlComponent.FadeOutElement("modalDialog");
         
@@ -487,7 +461,7 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void ShowToastMessage()
     {
-        ShowToastMessage("💬 Toast message triggered!");
+        ShowToastMessage("Toast message triggered!");
     }
     
     /// <summary>
@@ -501,8 +475,6 @@ public class KitchenSinkController : MonoBehaviour
         {
             SetElementText("toastText", message);
         }
-        
-        Debug.Log($"KitchenSinkController: Showing toast: {message ?? "Default message"}");
         
         StartCoroutine(ShowToastSequence());
     }
@@ -536,13 +508,12 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void PlayAnimationSequence()
     {
-        Debug.Log("KitchenSinkController: Playing animation sequence");
         StartCoroutine(ComplexAnimationSequence());
     }
     
     private IEnumerator ComplexAnimationSequence()
     {
-        ShowToastMessage("🎬 Starting animation sequence...");
+        ShowToastMessage("Starting animation sequence...");
         
         // Phase 1: Hide all columns
         uguimlComponent.SlideElementOffScreen("leftColumn", "Left");
@@ -568,7 +539,7 @@ public class KitchenSinkController : MonoBehaviour
         
         yield return new WaitForSeconds(0.5f);
         
-        ShowToastMessage("✨ Animation sequence complete!");
+        ShowToastMessage("Animation sequence complete!");
         PlaySound(successSound);
     }
     
@@ -577,15 +548,13 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void TriggerParticleEffect()
     {
-        Debug.Log("KitchenSinkController: Triggering particle effect");
-        
         // Simulate particle effect with multiple animations
         StartCoroutine(ParticleEffectSimulation());
     }
     
     private IEnumerator ParticleEffectSimulation()
     {
-        ShowToastMessage("✨ Particle effect triggered!");
+        ShowToastMessage("Particle effect triggered!");
         
         // Animate multiple elements to simulate particles
         string[] elements = { "statCard1", "statCard2", "statCard3", "gridBtn1", "gridBtn2", "gridBtn3" };
@@ -611,8 +580,7 @@ public class KitchenSinkController : MonoBehaviour
     /// </summary>
     public void PlaySoundEffect()
     {
-        Debug.Log("KitchenSinkController: Playing sound effect");
-        ShowToastMessage("🔊 Sound effect played!");
+        ShowToastMessage("Sound effect played!");
         
         PlaySound(buttonClickSound);
     }
@@ -621,9 +589,7 @@ public class KitchenSinkController : MonoBehaviour
     /// Execute random action
     /// </summary>
     public void ExecuteRandomAction()
-    {
-        Debug.Log("KitchenSinkController: Executing random action");
-        
+    {    
         string[] actions = {
             "Bounce random element",
             "Update stats",
@@ -645,7 +611,7 @@ public class KitchenSinkController : MonoBehaviour
                 UpdateGameStats();
                 break;
             case 2:
-                ShowToastMessage("🎲 Random action executed!");
+                ShowToastMessage("Random action executed!");
                 break;
             case 3:
                 AnimateStatCards();
@@ -656,7 +622,7 @@ public class KitchenSinkController : MonoBehaviour
                 break;
         }
         
-        ShowToastMessage($"🎲 {action}");
+        ShowToastMessage($"Random: {action}");
         PlaySound(buttonClickSound);
     }
     
@@ -719,58 +685,5 @@ public class KitchenSinkController : MonoBehaviour
         
         Debug.Log("Demo reset to initial state");
     }
-    
-    // Debug/Test Methods
-    public void TestToastButton()
-    {
-        Debug.Log("KitchenSinkController: Toast button test called!");
-        ShowToastMessage("🧪 Toast button test successful!");
-    }
-    
-    public void TestModalButton()
-    {
-        Debug.Log("KitchenSinkController: Modal button test called!");
-        ShowModalDialog();
-    }
-    
-    public void TestDropdown()
-    {
-        Debug.Log("KitchenSinkController: Testing dropdown...");
-        var dropdown = uguimlComponent.GetDropdown("themeDropdown");
-        if (dropdown != null)
-        {
-            Debug.Log($"Dropdown found! Options count: {dropdown.options.Count}");
-            for (int i = 0; i < dropdown.options.Count; i++)
-            {
-                Debug.Log($"Option {i}: {dropdown.options[i].text}");
-            }
-            Debug.Log($"Current value: {dropdown.value}");
-            Debug.Log($"Caption text: {dropdown.captionText?.text}");
-        }
-        else
-        {
-            Debug.LogError("Dropdown 'themeDropdown' not found!");
-        }
-    }
-    
-    // These methods can be called from inspector to test functionality
-    [ContextMenu("Test Toast Message")]
-    public void InspectorTestToast()
-    {
-        ShowToastMessage("Inspector test!");
-    }
-    
-    [ContextMenu("Test Modal Dialog")]
-    public void InspectorTestModal()
-    {
-        ShowModalDialog();
-    }
-    
-    [ContextMenu("Close Modal")]
-    public void InspectorCloseModal()
-    {
-        CloseModal();
-    }
-
     #endregion
 } 

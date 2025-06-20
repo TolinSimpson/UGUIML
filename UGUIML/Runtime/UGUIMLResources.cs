@@ -3,6 +3,13 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.Networking;
+using System.Threading.Tasks;
+using System.IO;
+#if ADDRESSABLE_ASSETS
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+#endif
 
 public class UGUIMLResources : MonoBehaviour
 {
@@ -181,26 +188,167 @@ public class GUIResource
     public async void LoadSource(string src, SourceTypes sourceTypes)
     {
         isLoaded = false;
-        switch (sourceTypes)
+        this.src = src;
+        this.sourceType = sourceTypes;
+        
+        try
         {
-            case SourceTypes.Addressable:
-                // Load addressable
-                break;
-            case SourceTypes.AssetBundle:
-                // Fetch asset from bundle
-                break;
-            case SourceTypes.LocalFile:
-                // Load local image file
-                break;
-            case SourceTypes.Resource:
-                break;
-            case SourceTypes.URL:
-                // Load from web request
-                break;
+            switch (sourceTypes)
+            {
+                case SourceTypes.Addressable:
+                    await LoadFromAddressable(src);
+                    break;
+                case SourceTypes.AssetBundle:
+                    await LoadFromAssetBundle(src);
+                    break;
+                case SourceTypes.LocalFile:
+                    await LoadFromLocalFile(src);
+                    break;
+                case SourceTypes.Resource:
+                    await LoadFromResources(src);
+                    break;
+                case SourceTypes.URL:
+                    await LoadFromURL(src);
+                    break;
+            }
+            
+            if (img != null)
+            {
+                isLoaded = true;
+                resourceType = GUIResourceTypes.RawImage;
+                SyncBindings();
+            }
+            else
+            {
+                Debug.LogError($"Failed to load texture from source: {src}");
+            }
         }
-        isLoaded = true;
-        resourceType = GUIResourceTypes.RawImage;
-        SyncBindings();
+        catch (Exception e)
+        {
+            Debug.LogError($"Error loading texture from {src}: {e.Message}");
+            isLoaded = false;
+        }
+    }
+
+    private async Task LoadFromAddressable(string address)
+    {
+#if ADDRESSABLE_ASSETS
+        try
+        {
+            AsyncOperationHandle<Texture2D> handle = Addressables.LoadAssetAsync<Texture2D>(address);
+            await handle.Task;
+            
+            if (handle.Status == AsyncOperationStatus.Succeeded)
+            {
+                img = handle.Result;
+            }
+            else
+            {
+                Debug.LogError($"Failed to load addressable texture: {address}");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Addressable loading error: {e.Message}");
+        }
+#else
+        Debug.LogWarning("Addressable Assets package not installed. Cannot load from addressable.");
+#endif
+    }
+
+    private async Task LoadFromAssetBundle(string assetName)
+    {
+        // Note: This assumes asset bundles are already loaded
+        // In a real implementation, you might want to load the bundle first
+        AssetBundle[] loadedBundles = Resources.FindObjectsOfTypeAll<AssetBundle>();
+        
+        foreach (AssetBundle bundle in loadedBundles)
+        {
+            if (bundle.Contains(assetName))
+            {
+                var request = bundle.LoadAssetAsync<Texture2D>(assetName);
+                while (!request.isDone)
+                {
+                    await Task.Yield();
+                }
+                
+                img = request.asset as Texture2D;
+                if (img != null) break;
+            }
+        }
+        
+        if (img == null)
+        {
+            Debug.LogWarning($"Asset '{assetName}' not found in any loaded asset bundle.");
+        }
+    }
+
+    private async Task LoadFromLocalFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                byte[] fileData = await Task.Run(() => File.ReadAllBytes(filePath));
+                
+                // Create texture on main thread
+                Texture2D texture = new Texture2D(2, 2);
+                if (texture.LoadImage(fileData))
+                {
+                    img = texture;
+                }
+                else
+                {
+                    Debug.LogError($"Failed to load image data from file: {filePath}");
+                    UnityEngine.Object.Destroy(texture);
+                }
+            }
+            else
+            {
+                Debug.LogError($"File not found: {filePath}");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error reading local file {filePath}: {e.Message}");
+        }
+    }
+
+    private async Task LoadFromResources(string resourcePath)
+    {
+        await Task.Yield(); // Yield to maintain async pattern
+        
+        Texture2D texture = Resources.Load<Texture2D>(resourcePath);
+        if (texture != null)
+        {
+            img = texture;
+        }
+        else
+        {
+            Debug.LogError($"Resource not found: {resourcePath}");
+        }
+    }
+
+    private async Task LoadFromURL(string url)
+    {
+        using (UnityWebRequest request = UnityWebRequestTexture.GetTexture(url))
+        {
+            var operation = request.SendWebRequest();
+            
+            while (!operation.isDone)
+            {
+                await Task.Yield();
+            }
+            
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                img = DownloadHandlerTexture.GetContent(request);
+            }
+            else
+            {
+                Debug.LogError($"Failed to download texture from URL: {url}. Error: {request.error}");
+            }
+        }
     }
 }
 public enum SourceTypes { Addressable, AssetBundle, LocalFile, Resource, URL }

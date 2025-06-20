@@ -316,19 +316,19 @@ public class UGUIMLElement : MonoBehaviour
     private void ExecuteEventHandler(UIEventHandler handler, params string[] runtimeParams)
     {
         string paramStr = runtimeParams.Length > 0 ? $" with params: {string.Join(", ", runtimeParams)}" : "";
-        Debug.Log($"UGUIMLElement '{elementName}': Executing {handler.eventType} event: {handler.commandName}{paramStr}");
+       // Debug.Log($"UGUIMLElement '{elementName}': Executing {handler.eventType} event: {handler.commandName}{paramStr}");
 
         // Try Unity Event execution first
         if (TryExecuteWithUnityEvents(handler, runtimeParams))
         {
-            Debug.Log($"UGUIMLElement '{elementName}': Successfully executed '{handler.commandName}' via UnityEvents");
+           // Debug.Log($"UGUIMLElement '{elementName}': Successfully executed '{handler.commandName}' via UnityEvents");
             return;
         }
 
         // Try method invocation on UGUIML parent
         if (TryExecuteWithMethodInvocation(handler, runtimeParams))
         {
-            Debug.Log($"UGUIMLElement '{elementName}': Successfully executed '{handler.commandName}' via method invocation");
+            // Debug.Log($"UGUIMLElement '{elementName}': Successfully executed '{handler.commandName}' via method invocation");
             return;
         }
 
@@ -369,10 +369,10 @@ public class UGUIMLElement : MonoBehaviour
         if (handler.parameters != null) allParams.AddRange(handler.parameters);
         allParams.AddRange(runtimeParams);
 
-        Debug.Log($"UGUIMLElement '{elementName}': Trying to invoke method '{handler.commandName}' with {allParams.Count} parameters");
+       // Debug.Log($"UGUIMLElement '{elementName}': Trying to invoke method '{handler.commandName}' with {allParams.Count} parameters");
 
         // Try to invoke method directly on UGUIML component first
-        Debug.Log($"UGUIMLElement '{elementName}': Trying UGUIML component ({parentUGUIML.GetType().Name})");
+       // Debug.Log($"UGUIMLElement '{elementName}': Trying UGUIML component ({parentUGUIML.GetType().Name})");
         if (TryInvokeMethodOnTarget(parentUGUIML, handler.commandName, allParams.ToArray()))
         {
             return true;
@@ -382,7 +382,7 @@ public class UGUIMLElement : MonoBehaviour
         var externalHandler = parentUGUIML.GetExternalCommandHandler();
         if (externalHandler != null)
         {
-            Debug.Log($"UGUIMLElement '{elementName}': Trying external handler ({externalHandler.GetType().Name})");
+          //  Debug.Log($"UGUIMLElement '{elementName}': Trying external handler ({externalHandler.GetType().Name})");
             if (TryInvokeMethodOnTarget(externalHandler, handler.commandName, allParams.ToArray()))
             {
                 return true;
@@ -818,19 +818,17 @@ public class UGUIMLElement : MonoBehaviour
 
     private string GetAttribute(string attributeName, string defaultValue)
     {
-        return sourceNode?.Attributes?[attributeName]?.Value ?? defaultValue;
+        return UGUIMLParser.GetAttribute(sourceNode, attributeName, defaultValue);
     }
 
     private float GetFloatAttribute(string attributeName, float defaultValue)
     {
-        string value = GetAttribute(attributeName, defaultValue.ToString());
-        return float.TryParse(value, out float result) ? result : defaultValue;
+        return UGUIMLParser.GetFloatAttribute(sourceNode, attributeName, defaultValue);
     }
 
     private int GetIntAttribute(string attributeName, int defaultValue)
     {
-        string value = GetAttribute(attributeName, defaultValue.ToString());
-        return int.TryParse(value, out int result) ? result : defaultValue;
+        return UGUIMLParser.GetIntAttribute(sourceNode, attributeName, defaultValue);
     }
 
     #endregion
