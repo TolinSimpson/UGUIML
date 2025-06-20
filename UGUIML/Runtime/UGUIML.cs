@@ -366,6 +366,282 @@ public class UGUIML : MonoBehaviour
         progressBar.value = targetValue;
     }
 
+    /// <summary>
+    /// External command handler reference for bridging to other components
+    /// </summary>
+    [Header("External Command Handler")]
+    [SerializeField] private MonoBehaviour externalCommandHandler;
+
+    /// <summary>
+    /// Set external command handler component that contains command methods
+    /// </summary>
+    public void SetExternalCommandHandler(MonoBehaviour handler)
+    {
+        externalCommandHandler = handler;
+        Debug.Log($"UGUIML: External command handler set to {handler?.name ?? "null"}");
+    }
+
+    /// <summary>
+    /// Get the external command handler for method invocation
+    /// </summary>
+    public MonoBehaviour GetExternalCommandHandler()
+    {
+        return externalCommandHandler;
+    }
+
+    /// <summary>
+    /// Play animation on an element by name with parameters
+    /// </summary>
+    /// <param name="elementName">Name of the element to animate</param>
+    /// <param name="animationType">Type of animation (fadein, fadeout, moveto, scale, slideoffscreen, bounce)</param>
+    /// <param name="parameters">Animation parameters (varies by type)</param>
+    public void PlayAnimationOnElement(string elementName, string animationType, params string[] parameters)
+    {
+        var element = GetUGUIMLElement(elementName);
+        if (element == null)
+        {
+            Debug.LogWarning($"UGUIML: Element '{elementName}' not found for animation!");
+            return;
+        }
+
+        float speed = parameters.Length > 0 && float.TryParse(parameters[0], out float s) ? s : 1f;
+
+        switch (animationType.ToLower())
+        {
+            case "fadein":
+                element.FadeIn(speed);
+                break;
+            case "fadeout":
+                element.FadeOut(speed);
+                break;
+            case "fade":
+                if (parameters.Length > 1 && float.TryParse(parameters[1], out float alpha))
+                {
+                    element.AnimateFade(alpha, speed);
+                }
+                break;
+            case "moveto":
+                if (parameters.Length >= 3 && 
+                    float.TryParse(parameters[1], out float x) && 
+                    float.TryParse(parameters[2], out float y))
+                {
+                    element.AnimateToPosition(new Vector2(x, y), speed);
+                }
+                break;
+            case "movetooriginal":
+                element.AnimateToOriginalPosition(speed);
+                break;
+            case "scale":
+                if (parameters.Length > 1 && float.TryParse(parameters[1], out float scale))
+                {
+                    element.AnimateScale(Vector3.one * scale, speed);
+                }
+                break;
+            case "slideoffscreen":
+                OffScreenDirection direction = OffScreenDirection.Left;
+                if (parameters.Length > 1)
+                {
+                    System.Enum.TryParse(parameters[1], true, out direction);
+                }
+                element.AnimateOffScreen(direction, speed);
+                break;
+            case "bounce":
+                StartCoroutine(BounceElementAnimation(element, speed));
+                break;
+            case "show":
+                element.FadeIn(speed);
+                element.AnimateToOriginalPosition(speed);
+                element.AnimateScale(Vector3.one, speed);
+                break;
+            case "hide":
+                element.FadeOut(speed);
+                element.AnimateOffScreen(OffScreenDirection.Left, speed);
+                break;
+            default:
+                Debug.LogWarning($"UGUIML: Unknown animation type '{animationType}' for element '{elementName}'");
+                break;
+        }
+
+      //  Debug.Log($"UGUIML: Playing '{animationType}' animation on element '{elementName}'");
+    }
+
+    /// <summary>
+    /// Bounce animation coroutine for elements
+    /// </summary>
+    private System.Collections.IEnumerator BounceElementAnimation(UGUIMLElement element, float speed)
+    {
+        Vector3 originalScale = element.RectTransform.localScale;
+        float bounceScale = 1.2f;
+        
+        // Scale up
+        element.AnimateScale(originalScale * bounceScale, speed * 2f);
+        yield return new UnityEngine.WaitForSeconds(0.1f / speed);
+        
+        // Scale back down
+        element.AnimateScale(originalScale, speed * 2f);
+    }
+
+    /// <summary>
+    /// Invoke an element's event/command by simulating the event
+    /// </summary>
+    /// <param name="elementName">Name of the element</param>
+    /// <param name="eventType">Type of event to trigger (click, valuechanged, etc.)</param>
+    /// <param name="parameters">Optional parameters for the event</param>
+    public void InvokeElementCommand(string elementName, string eventType, params string[] parameters)
+    {
+        var element = GetUGUIMLElement(elementName);
+        if (element == null)
+        {
+            Debug.LogWarning($"UGUIML: Element '{elementName}' not found for command invocation!");
+            return;
+        }
+
+        // Find matching event handlers
+        var matchingHandlers = element.EventHandlers.FindAll(h => 
+            h.eventType.Equals(eventType, System.StringComparison.OrdinalIgnoreCase));
+
+        if (matchingHandlers.Count == 0)
+        {
+            Debug.LogWarning($"UGUIML: No '{eventType}' event handlers found for element '{elementName}'");
+            return;
+        }
+
+        // Execute all matching handlers
+        foreach (var handler in matchingHandlers)
+        {
+            // Use reflection to call the private ExecuteEventHandler method
+            var executeMethod = typeof(UGUIMLElement).GetMethod("ExecuteEventHandler", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (executeMethod != null)
+            {
+                executeMethod.Invoke(element, new object[] { handler, parameters });
+            }
+        }
+
+        Debug.Log($"UGUIML: Invoked '{eventType}' command on element '{elementName}'");
+    }
+
+    /// <summary>
+    /// Built-in command methods that can be called from XML without external scripts
+    /// </summary>
+    #region Built-in Commands
+
+    public void ShowElement(string elementName)
+    {
+        PlayAnimationOnElement(elementName, "show", "2");
+    }
+
+    public void HideElement(string elementName)
+    {
+        PlayAnimationOnElement(elementName, "hide", "2");
+    }
+
+    public void ToggleElement(string elementName)
+    {
+        var element = GetUGUIMLElement(elementName);
+        if (element != null)
+        {
+            if (element.GetAlpha() > 0.5f)
+            {
+                HideElement(elementName);
+            }
+            else
+            {
+                ShowElement(elementName);
+            }
+        }
+    }
+
+    public void FadeInElement(string elementName)
+    {
+        PlayAnimationOnElement(elementName, "fadein", "2");
+    }
+
+    public void FadeOutElement(string elementName)
+    {
+        PlayAnimationOnElement(elementName, "fadeout", "2");
+    }
+
+    public void BounceElement(string elementName)
+    {
+        PlayAnimationOnElement(elementName, "bounce", "2");
+    }
+
+    public void MoveElementTo(string elementName, string x, string y)
+    {
+        PlayAnimationOnElement(elementName, "moveto", "2", x, y);
+    }
+
+    public void ScaleElement(string elementName, string scale)
+    {
+        PlayAnimationOnElement(elementName, "scale", "2", scale);
+    }
+
+    public void SlideElementOffScreen(string elementName, string direction)
+    {
+        PlayAnimationOnElement(elementName, "slideoffscreen", "2", direction);
+    }
+
+    public void SetElementText(string elementName, string newText)
+    {
+        if (textElements.TryGetValue(elementName, out TMP_Text textComponent))
+        {
+            textComponent.text = newText;
+            Debug.Log($"UGUIML: Set text of '{elementName}' to '{newText}'");
+        }
+        else
+        {
+            Debug.LogWarning($"UGUIML: Text element '{elementName}' not found!");
+        }
+    }
+
+    public void SetElementAlpha(string elementName, string alpha)
+    {
+        if (float.TryParse(alpha, out float alphaValue))
+        {
+            var element = GetUGUIMLElement(elementName);
+            if (element != null)
+            {
+                element.SetAlpha(alphaValue);
+                Debug.Log($"UGUIML: Set alpha of '{elementName}' to {alphaValue}");
+            }
+        }
+    }
+
+    public void SetElementInteractable(string elementName, string interactable)
+    {
+        if (bool.TryParse(interactable, out bool isInteractable))
+        {
+            var element = GetUGUIMLElement(elementName);
+            if (element != null)
+            {
+                element.SetInteractable(isInteractable);
+                Debug.Log($"UGUIML: Set interactable of '{elementName}' to {isInteractable}");
+            }
+        }
+    }
+
+    public void RestoreElementToOriginalPosition(string elementName)
+    {
+        PlayAnimationOnElement(elementName, "movetooriginal", "2");
+    }
+
+    public void RestoreElementToOriginalState(string elementName)
+    {
+        var element = GetUGUIMLElement(elementName);
+        if (element != null)
+        {
+            element.SetAlpha(1.0f);
+            element.AnimateToOriginalPosition(2f);
+            element.AnimateScale(Vector3.one, 2f);
+            element.SetInteractable(true);
+            Debug.Log($"UGUIML: Restored '{elementName}' to original state");
+        }
+    }
+
+    #endregion
+
     #endregion
 
     #region Private Methods
@@ -561,10 +837,10 @@ public class UGUIML : MonoBehaviour
                     {
                         backgroundImage.sprite = guiResources.DefaultPanelBackground;
                         backgroundImage.type = Image.Type.Sliced; // Use sliced for proper 9-slice scaling
-                        Debug.Log($"UGUIML: Applied default panel background to '{GetAttribute(node, "name", "unknown")}'");
+                      //  Debug.Log($"UGUIML: Applied default panel background to '{GetAttribute(node, "name", "unknown")}'");
                     }
                     backgroundImage.color = guiResources.DefaultPanelColor;
-                    Debug.Log($"UGUIML: Applied default panel color {guiResources.DefaultPanelColor} to '{GetAttribute(node, "name", "unknown")}'");
+                  //  Debug.Log($"UGUIML: Applied default panel color {guiResources.DefaultPanelColor} to '{GetAttribute(node, "name", "unknown")}'");
                 }
                 
                 // Override with XML attribute if provided
@@ -691,7 +967,7 @@ public class UGUIML : MonoBehaviour
             nestedCanvases[canvasName] = nestedCanvas;
             nestedRaycasters[canvasName] = raycaster;
 
-            Debug.Log($"UGUIML: Created nested canvas '{canvasName}' with render mode {nestedCanvas.renderMode}");
+          //  Debug.Log($"UGUIML: Created nested canvas '{canvasName}' with render mode {nestedCanvas.renderMode}");
         }
         catch (System.Exception e)
         {
@@ -713,11 +989,11 @@ public class UGUIML : MonoBehaviour
             if (guiResources.DefaultFont != null)
             {
                 textComponent.font = guiResources.DefaultFont;
-                Debug.Log($"UGUIML: Applied default font to '{GetAttribute(node, "name", "unknown")}'");
+              //  Debug.Log($"UGUIML: Applied default font to '{GetAttribute(node, "name", "unknown")}'");
             }
             textComponent.color = guiResources.DefaultTextColor;
             textComponent.fontSize = guiResources.DefaultFontSize;
-            Debug.Log($"UGUIML: Applied default text style (color: {guiResources.DefaultTextColor}, size: {guiResources.DefaultFontSize}) to '{GetAttribute(node, "name", "unknown")}'");
+           // Debug.Log($"UGUIML: Applied default text style (color: {guiResources.DefaultTextColor}, size: {guiResources.DefaultFontSize}) to '{GetAttribute(node, "name", "unknown")}'");
         }
         
         // Configure text properties (these can override defaults)
@@ -781,10 +1057,10 @@ public class UGUIML : MonoBehaviour
             {
                 buttonImage.sprite = guiResources.DefaultButtonBackground;
                 buttonImage.type = Image.Type.Sliced; // Use sliced for proper 9-slice scaling
-                Debug.Log($"UGUIML: Applied default button background to '{GetAttribute(node, "name", "unknown")}'");
+               // Debug.Log($"UGUIML: Applied default button background to '{GetAttribute(node, "name", "unknown")}'");
             }
             buttonImage.color = guiResources.DefaultButtonColor;
-            Debug.Log($"UGUIML: Applied default button color {guiResources.DefaultButtonColor} to '{GetAttribute(node, "name", "unknown")}'");
+            // Debug.Log($"UGUIML: Applied default button color {guiResources.DefaultButtonColor} to '{GetAttribute(node, "name", "unknown")}'");
         }
         
         // Configure button properties (can override defaults)
@@ -806,9 +1082,12 @@ public class UGUIML : MonoBehaviour
         colorBlock.fadeDuration = 0.1f;
         button.colors = colorBlock;
 
-        // Configure raycast and maskable settings
-        buttonImage.raycastTarget = GetBoolAttribute(node, "raycastTarget", true); // Buttons need raycast by default
+        // Configure raycast and maskable settings - ALWAYS enable raycast for buttons
+        buttonImage.raycastTarget = true; // Force true for all buttons to ensure they're clickable
         buttonImage.maskable = GetBoolAttribute(node, "maskable", false);
+        
+        // Set button as target graphic for proper interaction
+        button.targetGraphic = buttonImage;
 
         // Note: Command handling is now done automatically by UGUIMLElement event system
         // The 'command' attribute (or onClick, etc.) will be parsed and handled in UGUIMLElement.SetupEventHandlers()
@@ -835,9 +1114,9 @@ public class UGUIML : MonoBehaviour
             textComponent.alignment = TextAlignmentOptions.Center;
             textComponent.fontSize = GetFloatAttribute(node, "fontSize", 14f);
             
-            // Button text should not be raycast target (button image handles interaction)
+            // Button text should NEVER be raycast target (button image handles interaction)
             textComponent.raycastTarget = false;
-            textComponent.maskable = false;
+            textComponent.maskable = GetBoolAttribute(node, "maskable", false);
             
             string textColor = GetAttribute(node, "textColor", "#000000");
             if (ColorUtility.TryParseHtmlString(textColor, out Color color))
@@ -860,7 +1139,7 @@ public class UGUIML : MonoBehaviour
             if (guiResources.DefaultImageTexture != null)
             {
                 rawImage.texture = guiResources.DefaultImageTexture;
-                Debug.Log($"UGUIML: Applied default image texture to '{GetAttribute(node, "name", "unknown")}'");
+               // Debug.Log($"UGUIML: Applied default image texture to '{GetAttribute(node, "name", "unknown")}'");
             }
         }
         
@@ -1023,7 +1302,7 @@ public class UGUIML : MonoBehaviour
         string scrollName = GetAttribute(node, "name", "");
         scrollViews[scrollName] = scrollRect;
         
-        Debug.Log($"UGUIML: Created ScrollView '{scrollName}' with content area");
+        // Debug.Log($"UGUIML: Created ScrollView '{scrollName}' with content area");
     }
 
     private void CreateScrollbar(GameObject parent, bool isVertical, ScrollRect scrollRect)
@@ -1193,7 +1472,7 @@ public class UGUIML : MonoBehaviour
         string progressName = GetAttribute(node, "name", "");
         progressBars[progressName] = slider;
         
-        Debug.Log($"UGUIML: Created ProgressBar '{progressName}'");
+       // Debug.Log($"UGUIML: Created ProgressBar '{progressName}'");
     }
 
     private void CreateToggleGroup(GameObject groupObject, XmlNode node)
@@ -1206,7 +1485,7 @@ public class UGUIML : MonoBehaviour
         string groupName = GetAttribute(node, "name", "");
         toggleGroups[groupName] = toggleGroup;
         
-        Debug.Log($"UGUIML: Created ToggleGroup '{groupName}'");
+      //  Debug.Log($"UGUIML: Created ToggleGroup '{groupName}'");
     }
 
     private void CreateToggle(GameObject toggleObject, XmlNode node)
@@ -1289,7 +1568,7 @@ public class UGUIML : MonoBehaviour
         string toggleName = GetAttribute(node, "name", "");
         toggles[toggleName] = toggle;
         
-        Debug.Log($"UGUIML: Created Toggle '{toggleName}'");
+       // Debug.Log($"UGUIML: Created Toggle '{toggleName}'");
     }
 
     private void CreateInputField(GameObject inputObject, XmlNode node)
@@ -1385,7 +1664,7 @@ public class UGUIML : MonoBehaviour
         string inputName = GetAttribute(node, "name", "");
         inputFields[inputName] = inputField;
         
-        Debug.Log($"UGUIML: Created InputField '{inputName}'");
+       // Debug.Log($"UGUIML: Created InputField '{inputName}'");
     }
 
     private void CreateDropdown(GameObject dropdownObject, XmlNode node)
@@ -1573,16 +1852,24 @@ public class UGUIML : MonoBehaviour
             {
                 dropdown.options.Add(new TMP_Dropdown.OptionData(option.Trim()));
             }
+            Debug.Log($"UGUIML: Added {dropdown.options.Count} options to dropdown: {string.Join(", ", optionArray)}");
+        }
+        else
+        {
+            Debug.LogWarning("UGUIML: No options specified for dropdown!");
         }
         
         dropdown.value = GetIntAttribute(node, "value", 0);
         dropdown.RefreshShownValue();
         
+        // Force refresh the dropdown display
+        dropdown.captionText.text = dropdown.options.Count > 0 ? dropdown.options[dropdown.value].text : "No Options";
+        
         // Add to dictionary
         string dropdownName = GetAttribute(node, "name", "");
         dropdowns[dropdownName] = dropdown;
         
-        Debug.Log($"UGUIML: Created Dropdown '{dropdownName}'");
+      //  Debug.Log($"UGUIML: Created Dropdown '{dropdownName}'");
     }
 
     #endregion
@@ -1621,7 +1908,7 @@ public class UGUIML : MonoBehaviour
         string layoutName = GetAttribute(node, "name", "");
         horizontalLayouts[layoutName] = layout;
         
-        Debug.Log($"UGUIML: Created HorizontalLayout '{layoutName}'");
+       // Debug.Log($"UGUIML: Created HorizontalLayout '{layoutName}'");
     }
 
     private void CreateVerticalLayout(GameObject layoutObject, XmlNode node)
@@ -1656,7 +1943,7 @@ public class UGUIML : MonoBehaviour
         string layoutName = GetAttribute(node, "name", "");
         verticalLayouts[layoutName] = layout;
         
-        Debug.Log($"UGUIML: Created VerticalLayout '{layoutName}'");
+       // Debug.Log($"UGUIML: Created VerticalLayout '{layoutName}'");
     }
 
     private void CreateGridLayout(GameObject layoutObject, XmlNode node)
@@ -1689,7 +1976,7 @@ public class UGUIML : MonoBehaviour
         string layoutName = GetAttribute(node, "name", "");
         gridLayouts[layoutName] = layout;
         
-        Debug.Log($"UGUIML: Created GridLayout '{layoutName}'");
+       // Debug.Log($"UGUIML: Created GridLayout '{layoutName}'");
     }
 
     #endregion

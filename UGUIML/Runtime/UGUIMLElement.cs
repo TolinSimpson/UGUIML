@@ -315,19 +315,22 @@ public class UGUIMLElement : MonoBehaviour
     /// </summary>
     private void ExecuteEventHandler(UIEventHandler handler, params string[] runtimeParams)
     {
-        if (logEventExecution)
-        {
-            string paramStr = runtimeParams.Length > 0 ? $" with params: {string.Join(", ", runtimeParams)}" : "";
-            Debug.Log($"UGUIMLElement '{elementName}': Executing {handler.eventType} event: {handler.commandName}{paramStr}");
-        }
+        string paramStr = runtimeParams.Length > 0 ? $" with params: {string.Join(", ", runtimeParams)}" : "";
+        Debug.Log($"UGUIMLElement '{elementName}': Executing {handler.eventType} event: {handler.commandName}{paramStr}");
 
         // Try Unity Event execution first
         if (TryExecuteWithUnityEvents(handler, runtimeParams))
+        {
+            Debug.Log($"UGUIMLElement '{elementName}': Successfully executed '{handler.commandName}' via UnityEvents");
             return;
+        }
 
         // Try method invocation on UGUIML parent
         if (TryExecuteWithMethodInvocation(handler, runtimeParams))
+        {
+            Debug.Log($"UGUIMLElement '{elementName}': Successfully executed '{handler.commandName}' via method invocation");
             return;
+        }
 
         Debug.LogWarning($"UGUIMLElement '{elementName}': No execution method found for command '{handler.commandName}'");
     }
@@ -362,30 +365,60 @@ public class UGUIMLElement : MonoBehaviour
 
     private bool TryExecuteWithMethodInvocation(UIEventHandler handler, string[] runtimeParams)
     {
-        // Try to invoke method directly on UGUIML component
-        var uguimlType = parentUGUIML.GetType();
         var allParams = new List<string>();
         if (handler.parameters != null) allParams.AddRange(handler.parameters);
         allParams.AddRange(runtimeParams);
 
-        // Try to find method with matching parameter count
-        var methods = uguimlType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+        Debug.Log($"UGUIMLElement '{elementName}': Trying to invoke method '{handler.commandName}' with {allParams.Count} parameters");
+
+        // Try to invoke method directly on UGUIML component first
+        Debug.Log($"UGUIMLElement '{elementName}': Trying UGUIML component ({parentUGUIML.GetType().Name})");
+        if (TryInvokeMethodOnTarget(parentUGUIML, handler.commandName, allParams.ToArray()))
+        {
+            return true;
+        }
+
+        // If not found on UGUIML, try external command handler
+        var externalHandler = parentUGUIML.GetExternalCommandHandler();
+        if (externalHandler != null)
+        {
+            Debug.Log($"UGUIMLElement '{elementName}': Trying external handler ({externalHandler.GetType().Name})");
+            if (TryInvokeMethodOnTarget(externalHandler, handler.commandName, allParams.ToArray()))
+            {
+                return true;
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"UGUIMLElement '{elementName}': No external command handler found!");
+        }
+
+        return false;
+    }
+
+    private bool TryInvokeMethodOnTarget(object target, string methodName, string[] parameters)
+    {
+        if (target == null) return false;
+
+        var targetType = target.GetType();
+        var methods = targetType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+        
         foreach (var method in methods)
         {
-            if (method.Name == handler.commandName)
+            if (method.Name == methodName)
             {
                 var paramTypes = method.GetParameters();
-                if (paramTypes.Length == allParams.Count)
+                if (paramTypes.Length == parameters.Length)
                 {
                     try
                     {
-                        var convertedParams = ConvertParameters(allParams.ToArray(), paramTypes);
-                        method.Invoke(parentUGUIML, convertedParams);
+                        var convertedParams = ConvertParameters(parameters, paramTypes);
+                        method.Invoke(target, convertedParams);
                         return true;
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"UGUIMLElement '{elementName}': Failed to invoke method '{handler.commandName}' - {e.Message}");
+                        Debug.LogWarning($"UGUIMLElement '{elementName}': Failed to invoke method '{methodName}' on {target.GetType().Name} - {e.Message}");
                     }
                 }
             }

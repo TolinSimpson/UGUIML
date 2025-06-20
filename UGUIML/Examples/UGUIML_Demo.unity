@@ -222,7 +222,7 @@ GameObject:
   - component: {fileID: 1308958234}
   - component: {fileID: 1308958233}
   m_Layer: 0
-  m_Name: GUI Commander
+  m_Name: _UGUIML Resources
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -240,15 +240,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eeca0f501ea6f3c4f9df935aa80f6420, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resources:
-  - resourceType: 0
-    txt: 
-    gradient: {fileID: 0}
-    img: {fileID: 0}
-    src: 
-    sourceType: 0
-    isLoaded: 0
-    bindings: []
+  resources: []
   defaultButtonBackground: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
   defaultPanelBackground: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
   defaultImageTexture: {fileID: 10906, guid: 0000000000000000f000000000000000, type: 0}
@@ -379,6 +371,7 @@ GameObject:
   - component: {fileID: 1998039169}
   - component: {fileID: 1998039168}
   - component: {fileID: 1998039167}
+  - component: {fileID: 1998039172}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -401,6 +394,7 @@ MonoBehaviour:
   xmlFile: {fileID: 1042094116111776886, guid: d18b4bfe60d6008469cef12fb4dfd1a5, type: 3}
   autoLoadOnStart: 1
   clearCanvasOnLoad: 1
+  externalCommandHandler: {fileID: 0}
 --- !u!114 &1998039168
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -483,6 +477,43 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1998039172
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1998039166}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7aebc4bd4567c94fa35be7cfab0bdce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  uguimlComponent: {fileID: 1998039167}
+  animationSpeed: 2
+  buttonClickSound: {fileID: 8300000, guid: 6cfdb01b6bae3a840bd908a8f259d120, type: 3}
+  successSound: {fileID: 8300000, guid: 6cfdb01b6bae3a840bd908a8f259d120, type: 3}
+  errorSound: {fileID: 8300000, guid: b694c794feaae6a449003215c571243a, type: 3}
+  selectedGridItem: -1
+  currentTheme: 0
+  soundEnabled: 1
+  playerHealth: 75
+  playerExp: 42
+  playerGold: 1250
+  playerScore: 9875
+  playerStreak: 15
+  OnModalShown:
+    m_PersistentCalls:
+      m_Calls: []
+  OnModalClosed:
+    m_PersistentCalls:
+      m_Calls: []
+  OnThemeChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  OnMenuOpened:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1998147649
 GameObject:
   m_ObjectHideFlags: 0
